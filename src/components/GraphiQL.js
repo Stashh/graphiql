@@ -34,6 +34,9 @@ import {
   introspectionQuerySansSubscriptions,
 } from '../utility/introspectionQueries';
 
+import { environments } from '../config';
+import{ HeaderModal } from '../components/HeaderModal'
+
 const DEFAULT_DOC_EXPLORER_WIDTH = 350;
 
 /**
@@ -100,9 +103,13 @@ export class GraphiQL extends React.Component {
           this._storage.get('operationName'),
           queryFacts && queryFacts.operations,
         );
-
+        
     // Initialize state
     this.state = {
+      showHeadersModal: false,
+      headerInputs: JSON.parse(this._storage.get('headerInputs')) || [],
+      environmentValue : 0,
+      environmentUrl: Object.values(environments[0])[0],
       schema: props.schema,
       query,
       variables,
@@ -227,6 +234,9 @@ export class GraphiQL extends React.Component {
   // that when the component is remounted, it will use the last used values.
   componentWillUnmount() {
     this._storage.set('query', this.state.query);
+    this._storage.set('environmentUrl', this.state.environmentUrl);
+    this._storage.set('headerInputs',  JSON.stringify(this.state.headerInputs));
+    this._storage.set('environmentValue', this.state.environmentValue);
     this._storage.set('variables', this.state.variables);
     this._storage.set('operationName', this.state.operationName);
     this._storage.set('editorFlex', this.state.editorFlex);
@@ -236,7 +246,11 @@ export class GraphiQL extends React.Component {
     this._storage.set('historyPaneOpen', this.state.historyPaneOpen);
   }
 
+
+
   render() {
+
+    
     const children = React.Children.toArray(this.props.children);
 
     const logo =
@@ -256,6 +270,22 @@ export class GraphiQL extends React.Component {
           title="Show History"
           label="History"
         />
+    
+        <label className={'select-label'}>Environent:</label>
+        {this.renderEnvironments()}
+        <HeaderModal 
+          modalOpen={this.state.showHeadersModal}
+          handleToggleHeadersModal={this.handleToggleHeadersModal} handleAddHeaderInput = {this.handleAddHeaderInput} 
+          headerInputs={this.state.headerInputs} handleHeaderChange={this.handleHeaderChange} handleRemoveHeaderInput={this.handleRemoveHeaderInput}
+        />
+        <ToolbarButton
+          onClick={this.handleToggleHeadersModal}
+          title="Input Header"
+          label="Headers"
+        />
+
+        
+         
 
       </GraphiQL.Toolbar>;
 
@@ -287,6 +317,8 @@ export class GraphiQL extends React.Component {
 
     return (
       <div className="graphiql-container">
+
+       
         <div className="historyPaneWrap" style={historyPaneStyle}>
           <QueryHistory
             operationName={this.state.operationName}
@@ -398,6 +430,46 @@ export class GraphiQL extends React.Component {
     );
   }
 
+  handleToggleHeadersModal = () => {
+    this.setState({ showHeadersModal: !this.state.showHeadersModal });
+  }
+
+  handleRemoveHeaderInput = (i) => {
+    let headerInputs = this.state.headerInputs;
+    headerInputs.splice(i, 1);
+    this.setState({ headerInputs: this.state.headerInputs });
+  }
+
+  handleHeaderChange = (event, i, key) => {
+    let headerInputs = this.state.headerInputs;
+    headerInputs[i][key] = event.target.value;
+    this.setState({ headerInputs: this.state.headerInputs });
+  }
+
+  handleAddHeaderInput = () => {
+    let headerInputs = this.state.headerInputs;
+    headerInputs.push({key:'', value:''})
+    this.setState({ headerInputs: this.state.headerInputs });
+  }
+
+
+  handleEnvChange = (event) => {
+    const eventValue = event.target.value;
+    const url = Object.values(environments[event.target.value])[0]
+    this.setState({environmentValue: event.target.value, environmentUrl: url});
+  }
+
+  renderEnvironments() {
+    return (
+    <select className={'toolbar-dropdown'} value={this.state.environmentValue} onChange={this.handleEnvChange}>{
+      environments.map(function(environment, i){;
+        return  <option key={i} value={i}>{ Object.keys(environment)[0]  }</option>
+      })
+    }</select>
+    )
+  }
+
+
   /**
    * Get the query editor CodeMirror instance.
    *
@@ -476,7 +548,7 @@ export class GraphiQL extends React.Component {
   _fetchSchema() {
     const fetcher = this.props.fetcher;
 
-    const fetch = observableToPromise(fetcher({ query: introspectionQuery }));
+    const fetch = observableToPromise(fetcher({ query: introspectionQuery }, this.state.environmentUrl, this.state.headerInputs));
     if (!isPromise(fetch)) {
       this.setState({
         response: 'Fetcher did not return a Promise for introspection.',
@@ -493,9 +565,8 @@ export class GraphiQL extends React.Component {
         // Try the stock introspection query first, falling back on the
         // sans-subscriptions query for services which do not yet support it.
         const fetch2 = observableToPromise(
-          fetcher({
-            query: introspectionQuerySansSubscriptions,
-          }),
+          fetcher(
+            { query: introspectionQuerySansSubscriptions}, this.state.environmentUrl, this.state.headerInputs),
         );
         if (!isPromise(fetch)) {
           throw new Error(
@@ -555,7 +626,7 @@ export class GraphiQL extends React.Component {
       query,
       variables: jsonVariables,
       operationName,
-    });
+    }, this.state.environmentUrl, this.state.headerInputs);
 
     if (isPromise(fetch)) {
       // If fetcher returned a Promise, then call the callback when the promise
@@ -793,6 +864,7 @@ export class GraphiQL extends React.Component {
     }
     this.setState({ historyPaneOpen: !this.state.historyPaneOpen });
   };
+
 
   handleSelectHistoryQuery = (query, variables, operationName) => {
     this.handleEditQuery(query);
