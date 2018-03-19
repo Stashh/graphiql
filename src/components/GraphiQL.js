@@ -246,10 +246,7 @@ export class GraphiQL extends React.Component {
     this._storage.set('historyPaneOpen', this.state.historyPaneOpen);
   }
 
-
-
   render() {
-
     
     const children = React.Children.toArray(this.props.children);
 
@@ -316,9 +313,7 @@ export class GraphiQL extends React.Component {
     };
 
     return (
-      <div className="graphiql-container">
-
-       
+      <div className="graphiql-container">   
         <div className="historyPaneWrap" style={historyPaneStyle}>
           <QueryHistory
             operationName={this.state.operationName}

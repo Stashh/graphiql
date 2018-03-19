@@ -106,7 +106,6 @@
 
       // Defines a GraphQL fetcher using the fetch API.
       function graphQLFetcher(graphQLParams, url, headerInputs) {
-        console.log(url, headerInputs)
           let headers =  {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -117,9 +116,6 @@
               headers[header.key] = header.value
             }
           })
-
-           console.log(headers)
-
        
         return fetch(url, {
           method: 'post',

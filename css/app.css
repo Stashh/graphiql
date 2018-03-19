@@ -265,6 +265,7 @@
 .header-input {
   flex: 1; 
 }
+
 .blur-div {
   z-index: 9998;
   position: absolute;
